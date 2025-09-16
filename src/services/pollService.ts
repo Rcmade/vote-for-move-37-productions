@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { ApiError } from "@/middlewares/errorHandler";
 
 export async function createPoll({
   question,
@@ -13,7 +14,8 @@ export async function createPoll({
 }) {
   const user = await db.user.findUnique({ where: { id: creatorId } });
   if (!user) {
-    const err = new Error("Creator not found");
+    const err = new ApiError("Creator not found");
+    err.code = "CREATOR_NOT_FOUND";
     throw err;
   }
 

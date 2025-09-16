@@ -1,4 +1,5 @@
 import { User } from "@prisma/client";
+import type { Request } from "express";
 
 export type JwtPayload = User & {};
 

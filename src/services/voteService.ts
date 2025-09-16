@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { ApiError } from "@/middlewares/errorHandler";
 
 export type CastVoteResult = {
   voteId: string;
@@ -15,7 +16,7 @@ export async function castVote(
     include: { poll: true },
   });
   if (!option) {
-    const e: any = new Error("Option not found");
+    const e = new ApiError("Option not found");
     e.code = "OPTION_NOT_FOUND";
     throw e;
   }
@@ -31,7 +32,7 @@ export async function castVote(
   });
 
   if (existing) {
-    const e: any = new Error("User already voted for this poll");
+    const e = new ApiError("User already voted for this poll");
     e.code = "ALREADY_VOTED";
     throw e;
   }

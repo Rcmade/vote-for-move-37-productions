@@ -3,6 +3,8 @@ import type { Request, Response } from "express";
 
 // TODO: Add pagination
 export const getUsers = async (req: Request, res: Response) => {
-  const users = await db.user.findMany();
-  return res.json(users);
+  const users = await db.user.findMany({
+    select: { id: true, name: true, email: true },
+  });
+  return res.json({ success: true, users });
 };

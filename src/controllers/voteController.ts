@@ -1,5 +1,6 @@
 import { ApiError } from "@/middlewares/errorHandler";
 import * as voteService from "@/services/voteService";
+import { emitVoteUpdate } from "@/socket";
 import { VoteSchemaT } from "@/zodSchema/voteSchema";
 import { NextFunction, Request, Response } from "express";
 
@@ -19,7 +20,7 @@ export async function castVoteHandler(
     try {
       const result = await voteService.castVote(userId, body.optionId);
 
-      // TODO: broadcast vote using socket io
+      await emitVoteUpdate(result.pollId, result.options);
 
       return res.status(201).json({ ok: true, voteId: result.voteId });
     } catch (err: any) {
