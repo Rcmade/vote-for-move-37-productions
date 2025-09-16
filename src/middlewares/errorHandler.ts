@@ -1,11 +1,12 @@
+import { ErrorCodes } from "@/types";
 import { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 
 export class ApiError extends Error {
   status: number;
-  code?: string;
+  code?: ErrorCodes;
   details?: any;
-  constructor(message: string, status = 400, code?: string, details?: any) {
+  constructor(message: string, status = 400, code?: ErrorCodes, details?: any) {
     super(message);
     this.status = status;
     this.code = code;

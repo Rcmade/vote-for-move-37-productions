@@ -1,13 +1,13 @@
 import { ApiError } from "@/middlewares/errorHandler";
 import {
-  findUserByEmail,
   createUser,
+  findUserByEmail,
   validatePassword,
 } from "@/services/authService";
+import { signJwt } from "@/utils/jwt";
 import { LoginSchemaT, SignupSchemaT } from "@/zodSchema/authSchema";
 import { User } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
-import { signJwt } from "@/utils/jwt";
 
 export async function signupRequest(
   req: Request,
@@ -35,7 +35,7 @@ export async function signupRequest(
     });
 
     // Sign JWT
-    const token = signJwt({ userId: user.id, email: user.email });
+    const token = signJwt({ id: user.id, email: user.email });
 
     // Set cookie (httpOnly)
     res.cookie("token", token, {
@@ -46,7 +46,7 @@ export async function signupRequest(
     });
 
     // Return safe user object
-    return res.status(201).json({ ok: true, user });
+    return res.status(201).json({ success: true, user });
   } catch (err: any) {
     // Prisma unique constraint (if createUser didn't check)
     if (err?.code === "P2002") {
@@ -82,7 +82,7 @@ export async function loginRequest(
       );
     }
 
-    const token = signJwt({ userId: user.id, email: user.email });
+    const token = signJwt({ id: user.id, email: user.email });
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -96,7 +96,7 @@ export async function loginRequest(
       email: user.email,
     } as Partial<User>;
 
-    return res.status(200).json({ ok: true, user: safeUser });
+    return res.status(200).json({ success: true, user: safeUser });
   } catch (err) {
     return next(err);
   }

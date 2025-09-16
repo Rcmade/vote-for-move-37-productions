@@ -9,6 +9,9 @@ import morgan from "morgan";
 
 import { errorHandler } from "./middlewares/errorHandler";
 import authRoutes from "./routes/authRoutes";
+import pollRoutes from "./routes/pollRoute";
+import swaggerRouter from "./routes/swagger";
+import usersRoutes from "./routes/usersRoutes";
 
 declare global {
   namespace Express {
@@ -23,7 +26,7 @@ declare global {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(morgan("tiny"));
+app.use(morgan("dev"));
 
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
@@ -45,6 +48,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/polls", pollRoutes);
+app.use("/api/docs", swaggerRouter);
 
 app.use(errorHandler);
 
