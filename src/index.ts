@@ -12,6 +12,7 @@ import authRoutes from "./routes/authRoutes";
 import pollRoutes from "./routes/pollRoute";
 import swaggerRouter from "./routes/swagger";
 import usersRoutes from "./routes/usersRoutes";
+import voteRoutes from "./routes/voteRoute";
 
 declare global {
   namespace Express {
@@ -50,6 +51,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/polls", pollRoutes);
+app.use("/api/votes", voteRoutes);
 app.use("/api/docs", swaggerRouter);
 
 app.use(errorHandler);

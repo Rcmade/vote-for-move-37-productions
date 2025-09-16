@@ -185,8 +185,7 @@ paths:
               type: object
               required: [userId, optionId]
               properties:
-                userId: { type: integer }
-                optionId: { type: integer }
+                optionId: { type: string }
       responses:
         "201":
           description: Vote created (socket broadcast will occur)
