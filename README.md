@@ -71,8 +71,6 @@ The backend exposes REST endpoints for Users, Polls and Votes and broadcasts liv
 
 ---
 
-Is
-
 ## Tech stack
 
 - Node.js, Express
