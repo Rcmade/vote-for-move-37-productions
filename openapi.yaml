@@ -7,7 +7,7 @@ info:
     REST endpoints for Users, Polls and Votes. Real-time events are emitted via Socket.IO (see AsyncAPI / docs).
 
 servers:
-  - url: http://localhost:4002
+  - url: https://vote.rcmade.me
     description: Local dev
 
 components:
