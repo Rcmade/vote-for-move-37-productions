@@ -10,14 +10,17 @@ export interface SocketEventMap {
   };
 
   vote_update: {
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     clientToServer: {};
     serverToClient: {
       pollId: string;
       options: Array<{ id: string; text: string; votes: number }>;
     };
   };
+
   poll_created: {
-    clientToServer: {}; 
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    clientToServer: {};
     serverToClient: {
       poll: {
         id: string;
@@ -31,7 +34,9 @@ export interface SocketEventMap {
   };
 
   socket_error: {
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     clientToServer: {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serverToClient: { code: string; message: string; details?: any };
   };
 }
@@ -39,7 +44,7 @@ export interface SocketEventMap {
 export type ClientToServerEvents = {
   [K in keyof SocketEventMap]: (
     payload: SocketEventMap[K]["clientToServer"],
-    ack?: (err?: any) => void
+    ack?: (err?: unknown) => void
   ) => void;
 };
 

@@ -1,5 +1,6 @@
 import { ApiError } from "@/middlewares/errorHandler";
 import * as pollService from "@/services/pollService";
+import { emitPollCreated } from "@/socket";
 import { CreatePollSchemaT } from "@/zodSchema/pollSchema";
 import { NextFunction, Request, Response } from "express";
 
@@ -19,6 +20,16 @@ export async function createPollHandler(
       options: body.options,
       isPublished: body.isPublished ?? true,
     });
+
+    try {
+      await emitPollCreated({
+        ...created,
+        createdAt: String(created.createdAt),
+        updatedAt: String(created.updatedAt),
+      });
+    } catch (emitErr) {
+      console.warn("emitPollCreated failed", emitErr);
+    }
 
     return res.status(201).json({ success: true, poll: created });
   } catch (err) {

@@ -3,6 +3,9 @@
 // mode, the prisma client is instantiated once and then reused
 // in production mode, the prisma client is instantiated for each
 // request. This is a workaround for the overflow error.
+import dotenv from "dotenv";
+
+dotenv.config();
 
 import { PrismaClient } from "@prisma/client";
 

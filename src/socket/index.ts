@@ -1,4 +1,3 @@
-// src/socket/index.ts
 import type { TypedServer, TypedSocket } from "@/types/websocket";
 import type http from "http";
 import { socketProvider } from "./socketProvider";
@@ -82,4 +81,20 @@ export async function emitSocketError(
   }
 
   io.emit("socket_error", errorPayload);
+}
+
+export async function emitPollCreated(poll: {
+  id: string;
+  question: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+  options: Array<{ id: string; text: string; votes: number }>;
+}) {
+  const io = socketProvider.getIfInitialized();
+  if (!io) {
+    console.warn("[socket] emitPollCreated: io not initialized");
+    return;
+  }
+  io.emit("poll_created", { poll });
 }

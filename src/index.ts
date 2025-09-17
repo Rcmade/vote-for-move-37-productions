@@ -1,12 +1,11 @@
-import dotenv from "dotenv";
-dotenv.config();
-
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import dotenv from "dotenv";
 import express from "express";
 import helmet from "helmet";
 import { createServer } from "http";
 import morgan from "morgan";
+dotenv.config();
 
 import path from "path";
 import { errorHandler } from "./middlewares/errorHandler";
@@ -55,18 +54,18 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(
-  "/votings",
-  express.static(path.join(process.cwd(), "public", "votings"))
-);
-
+initSocket(httpServer);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/polls", pollRoutes);
 app.use("/api/votes", voteRoutes);
 app.use("/api/docs", swaggerRouter);
-initSocket(httpServer);
 
+const clientDist = path.join(process.cwd(), "client", "dist");
+app.use(express.static(clientDist));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(clientDist, "index.html"));
+});
 app.use(errorHandler);
 
 httpServer.listen(PORT, () => {

@@ -2,72 +2,178 @@ openapi: "3.1.0"
 info:
   title: Move37 Real-time Polls API
   version: "1.0.0"
-  description: Backend API for Move37 polling challenge — REST endpoints + Socket.IO events (see AsyncAPI).
+  description: |
+    Backend API for Move37 real-time polling challenge.
+    REST endpoints for Users, Polls and Votes. Real-time events are emitted via Socket.IO (see AsyncAPI / docs).
+
 servers:
-  - url: http://localhost:4002/api
+  - url: http://localhost:4002
     description: Local dev
 
 components:
-  # securitySchemes:
-  #   bearerAuth:
-  #     type: http
-  #     scheme: bearer
-  #     bearerFormat: JWT
+
+
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          nullable: true
+          type: object
+
     UserSafe:
       type: object
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
         name:
           type: string
         email:
           type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+
     SignupRequest:
       type: object
       required: [name, email, password]
       properties:
-        name: { type: string, minLength: 2 }
-        email: { type: string, format: email }
-        password: { type: string, minLength: 6 }
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      example:
+        name: "Alice"
+        email: "alice@example.com"
+        password: "secret123"
+
     LoginRequest:
       type: object
       required: [email, password]
       properties:
-        email: { type: string, format: email }
-        password: { type: string }
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      example:
+        email: "alice@example.com"
+        password: "secret123"
+
     PollOption:
       type: object
       properties:
-        id: { type: integer }
-        text: { type: string }
-        votes: { type: integer }
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        votes:
+          type: integer
+      required:
+        - id
+        - text
+        - votes
+
     Poll:
       type: object
       properties:
-        id: { type: integer }
-        question: { type: string }
-        isPublished: { type: boolean }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        isPublished:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
         options:
           type: array
           items:
             $ref: "#/components/schemas/PollOption"
+      required:
+        - id
+        - question
+        - options
+
     CreatePollRequest:
       type: object
       required: [question, options]
       properties:
-        question: { type: string }
+        question:
+          type: string
+        creatorId:
+          type: string
+          format: uuid
+          description: "When used server-side; in your API creatorId is derived from authenticated user. For docs/testing you can provide it."
         options:
           type: array
           items:
             type: string
+          minItems: 1
+        isPublished:
+          type: boolean
+      example:
+        question: "Which is your favourite language?"
+        options: ["JavaScript", "Python", "Go"]
+        isPublished: true
+
+    VoteRequest:
+      type: object
+      required: [optionId]
+      properties:
+        optionId:
+          type: string
+          format: uuid
+        # note: for public/unauthenticated vote endpoints you might include userId here; in this app votes require authentication
+      example:
+        optionId: "c3f1d7e2-...-uuid"
+
+    VoteResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        voteId:
+          type: string
+          format: uuid
+
+  parameters:
+    PollIdParam:
+      name: pollId
+      in: path
+      description: Poll UUID
+      required: true
+      schema:
+        type: string
+        format: uuid
 
 paths:
-  /auth/signup:
+  /api/auth/signup:
     post:
-      summary: Signup a new user
+      summary: Create a new user (signup)
+      tags: [Auth]
       requestBody:
         required: true
         content:
@@ -76,20 +182,31 @@ paths:
               $ref: "#/components/schemas/SignupRequest"
       responses:
         "201":
-          description: Created
+          description: User created; sets httpOnly cookie token
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  ok: { type: boolean }
+                  success: { type: boolean }
                   user: { $ref: "#/components/schemas/UserSafe" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Email clash
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/login:
+  /api/auth/login:
     post:
-      summary: Login user
+      summary: Login user (sets httpOnly token cookie)
+      tags: [Auth]
       requestBody:
         required: true
         content:
@@ -98,50 +215,142 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: OK (JWT cookie set)
+          description: Logged in successfully (cookie set)
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  ok: { type: boolean }
+                  success: { type: boolean }
                   user: { $ref: "#/components/schemas/UserSafe" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /users/{id}:
+  /api/auth/me:
     get:
-      summary: Get user by id
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
+      summary: Get current authenticated user
+      tags: [Auth]
+      security:
+        - cookieAuth: []
       responses:
         "200":
-          description: User
+          description: Current user
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserSafe"
-        "404":
-          description: Not found
-
-  /polls:
-    get:
-      summary: List polls
-      responses:
-        "200":
-          description: Poll list
+        "401":
+          description: Unauthorized or token invalid
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Poll"
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/logout:
     post:
-      summary: Create a poll
+      summary: Logout user (clears token cookie)
+      tags: [Auth]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+
+  /api/users:
+    post:
+      summary: Create user (alias for signup - used for user creation)
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  user: { $ref: "#/components/schemas/UserSafe" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: List users
+      tags: [Users]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of users (safe fields)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserSafe"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/polls:
+    get:
+      summary: List polls
+      tags: [Polls]
+      parameters:
+        - name: published
+          in: query
+          description: Filter by published flag (true/false). Default true.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Array of polls
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  polls:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Poll"
+    post:
+      summary: Create a new poll (authenticated)
+      tags: [Polls]
+      security:
+        - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -150,54 +359,104 @@ paths:
               $ref: "#/components/schemas/CreatePollRequest"
       responses:
         "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Poll"
-
-  /polls/p/{pollId}:
-    get:
-      summary: Get poll with options and vote counts
-      parameters:
-        - in: path
-          name: pollId
-          schema: { type: string }
-          required: true
-      responses:
-        "200":
-          description: Poll
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Poll"
-        "404":
-          description: Not found
-
-  /votes:
-    post:
-      summary: Cast a vote
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [userId, optionId]
-              properties:
-                optionId: { type: string }
-      responses:
-        "201":
-          description: Vote created (socket broadcast will occur)
+          description: Poll created; server emits poll_created via sockets
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   success: { type: boolean }
-                  voteId: { type: integer }
+                  poll: { $ref: "#/components/schemas/Poll" }
+        "400":
+          description: Validation or creator not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/polls/p/{pollId}:
+    get:
+      summary: Get single poll by ID (with option vote counts)
+      tags: [Polls]
+      parameters:
+        - $ref: "#/components/parameters/PollIdParam"
+      responses:
+        "200":
+          description: Poll object with options & vote counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  poll: { $ref: "#/components/schemas/Poll" }
+        "404":
+          description: Poll not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/votes:
+    post:
+      summary: Cast a vote for a poll option (authenticated)
+      tags: [Votes]
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteRequest"
+      responses:
+        "201":
+          description: Vote recorded; server emits vote_update via sockets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoteResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Option not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: User already voted or duplicate vote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-security:
-  - bearerAuth: []
+tags:
+  - name: Auth
+    description: Authentication endpoints (signup, login, logout, me)
+  - name: Users
+    description: User creation and listing
+  - name: Polls
+    description: Create and retrieve polls (includes options and vote counts)
+  - name: Votes
+    description: Submit votes for poll options
+
+externalDocs:
+  description: AsyncAPI (Socket.IO) for real-time events
+  url: https://studio.asyncapi.com/ # or point to your asyncapi.yaml
